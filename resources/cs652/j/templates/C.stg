@@ -1,0 +1,146 @@
+CFile(f, classes, main) ::= <<
+#include \<stdio.h>
+#include \<stdlib.h>
+
+typedef struct {
+    char *name;
+    int size;
+    void (*(*_vtable)[])();
+} metadata;
+
+typedef struct {
+    metadata *clazz;
+} object;
+
+object *alloc(metadata *clazz) {
+    object *p = calloc(1, clazz->size); // wipe to 0s
+    p->clazz = clazz;
+    return p;
+}
+
+<classes>
+
+<main>
+>>
+ClassDef(class, fields, methods, vtable,classBody,methodDecl) ::= <<
+// D e f i n e  C l a s s  <class.ClassName>
+typedef struct {
+    metadata *clazz;
+    <fields:{field|<field>;}; separator="\n ">
+} <class.ClassName>;
+
+<vtable:{vt|<vt>};separator="\n">
+
+<methods:{method|<method>};separator="">
+
+void (*<class.ClassName>_vtable[])() = {
+    <class.className:{c|(void (*)())& <c>};separator=",\n">
+    <FuncName>
+};
+
+metadata <class.ClassName>_metadata = {"<class.ClassName>", sizeof(<class.ClassName>), &<class.ClassName>_vtable};
+<classBody>
+>>
+
+vtable(v,className,functionName) ::= <<
+#define <className>_<functionName>_SLOT <v.slotNumber>
+>>
+
+ClassBody(classBodyDecl) ::=<<
+<classBodyDecl>
+>>
+/*ClassBodyDecl(methodDecl) ::= <<
+
+start body decl
+<methodDecl>
+end body decl
+
+>>
+*/
+/*MethodDef(m,funcName,returnType,args,body) ::= <<
+asdfasdf<m.returnType> <m.funcName>
+>>
+*/
+MethodDecl(m,funcName,returnType,args,body,formalParam) ::= <<
+<m.returnType> <funcName>(<formalParam:{arg1|<arg1>};separator=",">)
+{
+    <body>
+}
+
+>>
+
+
+//FormalParam(f,jtype,name) ::=<<<jtype> <name> >>
+
+MainMethod(main,funcName,returnType,args,body) ::= <<
+int main(int argc, char *argv[])
+{
+    <body;separator="\n">
+    return 0;
+}
+>>
+
+Block(block, locals, instrs) ::= <<
+<locals:{local|<local>};separator="\n">
+<instrs:{local|<local>}>
+>>
+
+VarDef(var, type)   ::= <<<var.type> <var.ID>
+>>
+
+
+FuncName(f)         ::= "<f.FName>"
+
+ObjectTypeSpec(o)   ::= "<o.typeName> *"
+PrimitiveTypeSpec(p)::= "<p.typeName>"
+
+AssignStat(a,left,right) ::= <<
+<left> = <right><ctorCall>;
+>>
+PrintStringStat(p)  ::= <<
+printf(<p.string>);
+>>
+PrintStat(p,args)   ::= <<
+
+printf(<p.string>,<args:{arg|<arg>};separator=",">);
+>>
+CallStat(c,call)    ::= <<
+
+<call>;
+>>
+CtorCall(ctor)      ::= "
+((<ctor.name> *)alloc(&<ctor.name>_metadata))
+"
+ReturnStat(r,expr)  ::= "return <expr>;"
+WhileStat(w,condition, stat) ::= <<
+
+while(<condition>) {
+    <stat>}>>
+IfStat(i,condition, stat) ::= <<
+
+if ( <condition> ) <stat>
+>>
+IfElseStat(i,condition, stat, elseStat) ::= <<
+
+if ( <condition> ) <stat>
+else <elseStat>
+>>
+
+NullRef(n)          ::= "NULL"
+
+IntRef(IR) ::= << <IR.IntName> >>
+
+FloatRef(FR) ::= << <FR.FloatName> >>
+
+LiteralRef(lit)     ::= ""
+VarRef(v)           ::= "<v.name>"
+FieldRef(f, object) ::= "<object>-><f.name>"
+ThisRef(t)          ::= "this"
+MethodCall(m, receiver, receiverType, fptrType, args) ::= <<(*<fptrType>(*(<receiver>)->clazz->_vtable)[<m.currentClass>_<m.methodName>_SLOT])(<args:{arg|<arg>};separator=",">)
+>>
+
+
+FptrType(f, returnType, argTypes) ::= <<(<returnType> (*)(<argTypes:{argType|<argType>};separator=",">))>>
+TypeCast(cast, type, expr) ::= "((<type>)<expr>)"
+
+ClassName(c)::="<c.name>"
